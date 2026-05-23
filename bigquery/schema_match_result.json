@@ -1,0 +1,10 @@
+[
+  { "name": "match_id",       "type": "STRING",    "mode": "REQUIRED" },
+  { "name": "session_id",     "type": "STRING",    "mode": "REQUIRED" },
+  { "name": "opponent_name",  "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "opponent_level", "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "score",          "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "result",         "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "tactical_focus", "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "created_at",     "type": "TIMESTAMP", "mode": "REQUIRED" }
+]
