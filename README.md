@@ -191,7 +191,3 @@ tennis-tracker/
 └── dashboard/
     └── index.html
 ```
-
----
-
-Built by Raqil. Recreational tennis player, data person, tracks too many things.
