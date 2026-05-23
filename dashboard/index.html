@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tennis dashboard</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg2: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  --text: var(--tg-theme-text-color, #1a1a1a);
+  --text2: var(--tg-theme-hint-color, #71717a);
+  --accent: var(--tg-theme-button-color, #3B6D11);
+  --border: rgba(0,0,0,0.07);
+  --win: #3B6D11;
+  --win-bg: #EAF3DE;
+  --win-text: #27500A;
+  --loss: #A32D2D;
+  --loss-bg: #FCEBEB;
+  --loss-text: #791F1F;
+  --r: 12px;
+  --rsm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 16px 0; position: sticky; top: 0; z-index: 10; }
+.header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--win-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.avatar-ring { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--win); }
+.h-title { font-size: 17px; font-weight: 500; line-height: 1.2; }
+.h-sub { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-top: 1px; }
+.tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 9px 14px; font-size: 13px; font-weight: 500; font-family: 'Outfit', sans-serif; color: var(--text2); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; transition: color 0.15s; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.page { display: none; padding: 16px; }
+.page.active { display: block; }
+.mgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.mcard { background: var(--bg2); border-radius: var(--rsm); padding: 12px 8px; text-align: center; }
+.mval { font-size: 20px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; line-height: 1.1; }
+.mlabel { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--r); padding: 14px; margin-bottom: 14px; }
+.clabel { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 12px; }
+.streak-row { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--win-bg); border-radius: var(--rsm); margin-bottom: 14px; }
+.streak-num { font-size: 36px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--win); line-height: 1; }
+.streak-lbl { font-size: 14px; font-weight: 500; color: var(--win-text); }
+.streak-sub { font-size: 11px; color: var(--win); margin-top: 2px; }
+.loc-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--bg2); border-radius: 20px; padding: 6px 12px; font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+.loc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.skill-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.skill-row:last-child { margin-bottom: 0; }
+.sname { width: 64px; font-size: 12px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+.strack { flex: 1; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+.sfill { height: 100%; border-radius: 4px; transition: width 0.7s cubic-bezier(0.4,0,0.2,1); }
+.snum { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text); width: 24px; text-align: right; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 11px; color: var(--text2); }
+.li { display: flex; align-items: center; gap: 4px; }
+.ls { width: 8px; height: 8px; border-radius: 2px; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.rlabel { font-size: 13px; }
+.rval { font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
+.badge { font-size: 11px; font-family: 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 4px; }
+.bwin { background: var(--win-bg); color: var(--win-text); }
+.bloss { background: var(--loss-bg); color: var(--loss-text); }
+.match-item { padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+.match-item:last-child { border-bottom: none; }
+.match-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 3px; }
+.match-opp { font-size: 14px; font-weight: 500; }
+.match-meta { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+.tactic-item { padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+.tactic-item:last-child { border-bottom: none; }
+.tactic-text { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 6px; }
+.traj-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+.traj-row:last-child { border-bottom: none; }
+.tskill { width: 74px; font-size: 12px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+.tvals { font-size: 13px; font-family: 'IBM Plex Mono', monospace; display: flex; gap: 6px; align-items: center; }
+.tup { color: var(--win); }
+.tdown { color: var(--loss); }
+.tflat { color: var(--text2); }
+.heatmap { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; }
+.hcell { width: 100%; height: 24px; border-radius: 3px; background: var(--bg2); }
+.hs1 { background: #C0DD97; }
+.hs2 { background: #639922; }
+.hmap-dates { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-bottom: 6px; }
+.coaching-item { padding: 11px 0; border-bottom: 0.5px solid var(--border); }
+.coaching-item:last-child { border-bottom: none; }
+.coaching-date { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.coaching-meta { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px; }
+.coaching-focus { font-size: 12px; color: var(--text); line-height: 1.5; }
+.insight-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.insight-item:last-child { border-bottom: none; }
+.insight-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.insight-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+.upcoming-item { display: flex; gap: 12px; padding: 11px 0; border-bottom: 0.5px solid var(--border); align-items: flex-start; }
+.upcoming-item:last-child { border-bottom: none; }
+.udot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 4px; }
+.utitle { font-size: 13px; font-weight: 500; }
+.umeta { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+.note { font-size: 12px; color: var(--text2); padding: 8px 0; font-style: italic; }
+.loading { text-align: center; padding: 48px 0; color: var(--text2); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
+.err { color: var(--loss); font-size: 12px; padding: 10px 0; font-family: 'IBM Plex Mono', monospace; }
+.donut-wrap { position: relative; width: 100%; height: 200px; }
+.donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 1; }
+.donut-num { font-size: 26px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; color: var(--text); line-height: 1.1; }
+.donut-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+</style>
+</head>
+<body>
+<h2 class="sr-only">Raqil's tennis performance dashboard with overview, progress, matches, and activity sections.</h2>
+<header class="header">
+  <div class="header-row">
+    <div class="avatar"><div class="avatar-ring"></div></div>
+    <div>
+      <div class="h-title">Raqil's Tennis</div>
+      <div class="h-sub">Performance Dashboard</div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" onclick="showPage('overview',this)">Overview</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('progress',this)">Progress</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('matches',this)">Matches</button>
+    <button class="tab" role="tab" aria-selected="false" onclick="showPage('activity',this)">Activity</button>
+  </nav>
+</header>
+<main>
+  <div id="overview" class="page active" role="tabpanel"><div class="loading">Loading...</div></div>
+  <div id="progress" class="page" role="tabpanel"><div class="loading">Loading...</div></div>
+  <div id="matches" class="page" role="tabpanel"><div class="loading">Loading...</div></div>
+  <div id="activity" class="page" role="tabpanel"><div class="loading">Loading...</div></div>
+</main>
+<script>
+const BASE = 'YOUR_N8N_WEBHOOK_URL';
+const charts = {};
+if (window.Telegram && window.Telegram.WebApp) { window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
+
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+}
+
+function fmtDate(raw) {
+  if (!raw) return '';
+  const d = new Date(raw + 'T00:00:00');
+  return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtShort(d) {
+  return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+}
+
+function dc(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+const skKeys = ['serve','forehand','backhand','volley','footwork','focus','return_rating'];
+const skLabel = { serve:'Serve', forehand:'Forehand', backhand:'Backhand', volley:'Volley', footwork:'Footwork', focus:'Focus', return_rating:'Return', mental_focus:'Focus' };
+const skColor = { serve:'#639922', forehand:'#1D9E75', backhand:'#185FA5', volley:'#D85A30', footwork:'#BA7517', focus:'#7F77DD', return_rating:'#D4537E' };
+const trendKeys = ['serve','forehand','backhand','volley','return_rating'];
+
+async function loadOverview() {
+  const el = document.getElementById('overview');
+  try {
+    const d = await fetch(`${BASE}/dashboard-overview`).then(r => r.json());
+    const hours = parseFloat((d.total_minutes / 60).toFixed(1));
+    const radarData = skKeys.map(k => parseFloat(d.skill_averages[k] || 0));
+
+    el.innerHTML = `
+      <div class="mgrid">
+        <div class="mcard"><div class="mval">${d.total_sessions}</div><div class="mlabel">Sessions</div></div>
+        <div class="mcard"><div class="mval">${hours}h</div><div class="mlabel">Court Time</div></div>
+        <div class="mcard"><div class="mval">${d.total_wins}W ${d.total_losses}L</div><div class="mlabel">Record</div></div>
+      </div>
+      <div class="streak-row">
+        <div class="streak-num">${d.current_streak}</div>
+        <div><div class="streak-lbl">Week Streak</div><div class="streak-sub">Consecutive weeks with sessions</div></div>
+      </div>
+      ${d.top_location ? `<div class="loc-pill"><div class="loc-dot"></div>Most Played: ${d.top_location}</div>` : ''}
+      <div class="card">
+        <div class="clabel">Session Breakdown</div>
+        <div class="legend">
+          <span class="li"><span class="ls" style="background:#639922"></span>Match ${d.session_types.match}</span>
+          <span class="li"><span class="ls" style="background:#1D9E75"></span>Social ${d.session_types.social_game}</span>
+          <span class="li"><span class="ls" style="background:#185FA5"></span>Coaching ${d.session_types.coaching}</span>
+          <span class="li"><span class="ls" style="background:#D85A30"></span>Solo ${d.session_types.solo_drill}</span>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut-center">
+            <div class="donut-num">${d.total_sessions}</div>
+            <div class="donut-sub">sessions</div>
+          </div>
+          <canvas id="typeChart" role="img" aria-label="Donut chart: Match ${d.session_types.match}, Social ${d.session_types.social_game}, Coaching ${d.session_types.coaching}, Solo ${d.session_types.solo_drill}.">${d.total_sessions} total sessions.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="clabel">Skill Radar</div>
+        <div style="position:relative;width:100%;height:240px;">
+          <canvas id="radarChart" role="img" aria-label="Radar chart of 7 skill averages.">Skill averages: ${skKeys.map(k => skLabel[k] + ' ' + parseFloat(d.skill_averages[k]||0).toFixed(1)).join(', ')}</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="clabel">Skill Averages</div>
+        ${skKeys.map(sk => `
+          <div class="skill-row">
+            <div class="sname">${skLabel[sk]}</div>
+            <div class="strack"><div class="sfill" style="width:${Math.round((parseFloat(d.skill_averages[sk]||0)/5)*100)}%;background:${skColor[sk]}"></div></div>
+            <div class="snum">${parseFloat(d.skill_averages[sk]||0).toFixed(1)}</div>
+          </div>`).join('')}
+      </div>`;
+
+    dc('typeChart');
+    charts['typeChart'] = new Chart(document.getElementById('typeChart'), {
+      type: 'doughnut',
+      data: { labels: ['Match','Social','Coaching','Solo'], datasets: [{ data: [d.session_types.match, d.session_types.social_game, d.session_types.coaching, d.session_types.solo_drill], backgroundColor: ['#639922','#1D9E75','#185FA5','#D85A30'], borderWidth: 3, borderColor: '#ffffff', hoverOffset: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } }
+    });
+
+    dc('radarChart');
+    charts['radarChart'] = new Chart(document.getElementById('radarChart'), {
+      type: 'radar',
+      data: { labels: skKeys.map(k => skLabel[k]), datasets: [{ label: 'Skills', data: radarData, backgroundColor: 'rgba(99,153,34,0.15)', borderColor: '#639922', borderWidth: 2, pointBackgroundColor: '#639922', pointRadius: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', backdropColor: 'transparent' }, grid: { color: 'rgba(0,0,0,0.06)' }, pointLabels: { font: { family: 'IBM Plex Mono', size: 11 }, color: '#71717a' }, angleLines: { color: 'rgba(0,0,0,0.06)' } } }, plugins: { legend: { display: false } } }
+    });
+  } catch(e) { el.innerHTML = `<div class="err">Failed to load overview data.</div>`; }
+}
+
+async function loadProgress() {
+  const el = document.getElementById('progress');
+  try {
+    const [d, ins] = await Promise.all([
+      fetch(`${BASE}/dashboard-progress`).then(r => r.json()),
+      fetch(`${BASE}/dashboard-insights`).then(r => r.json())
+    ]);
+
+    const dates = d.skill_trends.map(s => s.date.slice(5));
+    const datasets = trendKeys.map(sk => ({
+      label: skLabel[sk],
+      data: d.skill_trends.map(s => s[sk] ? parseFloat(s[sk]) : null),
+      borderColor: skColor[sk], backgroundColor: 'transparent', borderWidth: 1.5,
+      pointRadius: 3, pointBackgroundColor: skColor[sk], tension: 0.35, spanGaps: true
+    }));
+
+    const hasTraj = d.trajectory.some(t => Math.abs(parseFloat(t.first30) - parseFloat(t.last30)) > 0.05);
+
+    el.innerHTML = `
+      <div class="card">
+        <div class="clabel">Skill Trends Over Time</div>
+        <div class="legend">${trendKeys.map(sk => `<span class="li"><span class="ls" style="background:${skColor[sk]}"></span>${skLabel[sk]}</span>`).join('')}</div>
+        <div style="position:relative;width:100%;height:220px;"><canvas id="trendChart" role="img" aria-label="Line chart of skill ratings over ${d.skill_trends.length} sessions.">Skill trends over time.</canvas></div>
+      </div>
+      <div class="card">
+        <div class="clabel">What's Going Well</div>
+        ${ins.strengths && ins.strengths.length > 0
+          ? ins.strengths.map(s => `<div class="insight-item"><div class="insight-dot" style="background:var(--win)"></div><div class="insight-text">${s}</div></div>`).join('')
+          : `<div class="note">Not enough data yet. Keep logging sessions.</div>`}
+      </div>
+      <div class="card">
+        <div class="clabel">Priorities To Improve</div>
+        ${ins.priorities && ins.priorities.length > 0
+          ? ins.priorities.map(p => `<div class="insight-item"><div class="insight-dot" style="background:#BA7517"></div><div class="insight-text">${p}</div></div>`).join('')
+          : `<div class="note">Not enough data yet. Keep logging sessions.</div>`}
+        <div style="font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;margin-top:10px;">Based on last 30 days · ${ins.session_count} sessions analysed</div>
+      </div>
+      <div class="card">
+        <div class="clabel">Session Duration (Min)</div>
+        <div style="position:relative;width:100%;height:160px;"><canvas id="durChart" role="img" aria-label="Bar chart of session duration.">${d.duration_trend.map(s => fmtDate(s.date) + ': ' + s.duration + 'min').join(', ')}</canvas></div>
+      </div>
+      <div class="card">
+        <div class="clabel">Energy Before vs After</div>
+        <div class="legend">
+          <span class="li"><span class="ls" style="background:#C0DD97"></span>Before</span>
+          <span class="li"><span class="ls" style="background:#F0997B"></span>After</span>
+        </div>
+        <div style="position:relative;width:100%;height:160px;"><canvas id="energyChart" role="img" aria-label="Grouped bar chart of energy before and after by session type.">Energy by session type.</canvas></div>
+      </div>
+      <div class="card">
+        <div class="clabel">Improvement Trajectory</div>
+        <div style="font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">First 30 sessions vs last 30</div>
+        ${!hasTraj
+          ? `<div class="note">Not enough variation yet. Keep logging and this will update over time.</div>`
+          : d.trajectory.map(t => {
+              const f = parseFloat(t.first30), l = parseFloat(t.last30);
+              if (isNaN(f) || isNaN(l)) return '';
+              const diff = l - f;
+              const cls = diff > 0.2 ? 'tup' : diff < -0.2 ? 'tdown' : 'tflat';
+              const arrow = diff > 0.2 ? '+'+diff.toFixed(1) : diff < -0.2 ? diff.toFixed(1) : '—';
+              const lbl = skLabel[t.skill] || (t.skill === 'mental_focus' ? 'Focus' : t.skill);
+              return `<div class="traj-row"><div class="tskill">${lbl}</div><div class="tvals"><span>${f.toFixed(1)}</span><span style="color:var(--text2)">→</span><span>${l.toFixed(1)}</span><span class="${cls}">${arrow}</span></div></div>`;
+            }).join('')}
+      </div>`;
+
+    dc('trendChart');
+    charts['trendChart'] = new Chart(document.getElementById('trendChart'), {
+      type: 'line', data: { labels: dates, datasets },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 5, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', stepSize: 1 } }, x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', maxRotation: 0, maxTicksLimit: 6 } } }, plugins: { legend: { display: false } } }
+    });
+
+    dc('durChart');
+    charts['durChart'] = new Chart(document.getElementById('durChart'), {
+      type: 'bar',
+      data: { labels: d.duration_trend.map(s => s.date.slice(5)), datasets: [{ data: d.duration_trend.map(s => parseInt(s.duration)), backgroundColor: '#C0DD97', borderColor: '#639922', borderWidth: 1, borderRadius: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a' } }, x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', maxRotation: 0 } } }, plugins: { legend: { display: false } } }
+    });
+
+    dc('energyChart');
+    charts['energyChart'] = new Chart(document.getElementById('energyChart'), {
+      type: 'bar',
+      data: { labels: d.energy_by_type.map(e => e.type.replace('_',' ')), datasets: [{ label: 'Before', data: d.energy_by_type.map(e => parseFloat(e.avg_before)), backgroundColor: '#C0DD97', borderRadius: 3 }, { label: 'After', data: d.energy_by_type.map(e => parseFloat(e.avg_after)), backgroundColor: '#F0997B', borderRadius: 3 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 5, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', stepSize: 1 } }, x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: '#71717a', maxRotation: 0 } } }, plugins: { legend: { display: false } } }
+    });
+  } catch(e) { el.innerHTML = `<div class="err">Failed to load progress data.</div>`; }
+}
+
+async function loadMatches() {
+  const el = document.getElementById('matches');
+  try {
+    const d = await fetch(`${BASE}/dashboard-matches`).then(r => r.json());
+    el.innerHTML = `
+      <div class="mgrid">
+        <div class="mcard"><div class="mval">${d.win_rate}%</div><div class="mlabel">Win Rate</div></div>
+        <div class="mcard"><div class="mval" style="color:var(--win)">${d.wins}</div><div class="mlabel">Wins</div></div>
+        <div class="mcard"><div class="mval" style="color:var(--loss)">${d.losses}</div><div class="mlabel">Losses</div></div>
+      </div>
+      <div class="card">
+        <div class="clabel">Win/Loss By Level</div>
+        ${d.by_level.map(l => `<div class="row"><div class="rlabel" style="text-transform:capitalize">${l.level}</div><div class="rval"><span style="color:var(--win)">${l.wins}W</span><span style="color:var(--text2)"> / </span><span style="color:var(--loss)">${l.losses}L</span>${l.matches > 0 ? `<span style="color:var(--text2);font-size:10px;margin-left:6px">${l.win_rate}%</span>` : ''}</div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="clabel">Head-To-Head</div>
+        ${d.head_to_head.map(h => `<div class="row"><div class="rlabel">${h.opponent}</div><div class="rval"><span style="color:var(--win)">${h.wins}W</span><span style="color:var(--text2)"> / </span><span style="color:var(--loss)">${h.losses}L</span></div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="clabel">Recent Matches</div>
+        ${d.recent_matches.map(m => `<div class="match-item"><div class="match-top"><div class="match-opp">vs ${m.opponent}</div><span class="badge b${m.result}">${m.result} ${m.score || ''}</span></div><div class="match-meta">${fmtDate(m.date)} · ${m.opponent_level} · ${m.location || ''}</div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="clabel">Tactical Notes</div>
+        ${d.tactics_raw.map(t => `<div class="tactic-item"><div class="tactic-text">${t.tactic}</div><span class="badge b${t.result}">${t.result}</span></div>`).join('')}
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="err">Failed to load match data.</div>`; }
+}
+
+async function loadActivity() {
+  const el = document.getElementById('activity');
+  try {
+    const d = await fetch(`${BASE}/dashboard-activity`).then(r => r.json());
+    const today = new Date();
+    const cells = [];
+    for (let i = 29; i >= 0; i--) {
+      const dt = new Date(today);
+      dt.setDate(today.getDate() - i);
+      const ds = dt.toISOString().split('T')[0];
+      const f = d.heatmap.find(h => h.date === ds);
+      cells.push({ date: ds, dt, count: f ? f.count : 0 });
+    }
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 29);
+
+    el.innerHTML = `
+      <div class="card">
+        <div class="clabel">Activity — Last 30 Days</div>
+        <div class="hmap-dates"><span>${fmtShort(startDate)}</span><span>Today</span></div>
+        <div class="heatmap">
+          ${cells.map(c => `<div class="hcell ${c.count >= 2 ? 'hs2' : c.count === 1 ? 'hs1' : ''}" title="${fmtDate(c.date)}${c.count ? ': '+c.count+' session'+(c.count>1?'s':'') : ': no session'}"></div>`).join('')}
+        </div>
+        <div class="legend" style="margin-top:4px;">
+          <span class="li"><span class="ls" style="background:var(--bg2)"></span>None</span>
+          <span class="li"><span class="ls" style="background:#C0DD97"></span>1 session</span>
+          <span class="li"><span class="ls" style="background:#639922"></span>2+ sessions</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="clabel">Upcoming Sessions</div>
+        ${d.upcoming_sessions.length === 0
+          ? `<div class="note">No sessions scheduled in the next 7 days. Use /schedule to add one.</div>`
+          : d.upcoming_sessions.map(s => `<div class="upcoming-item"><div class="udot"></div><div><div class="utitle">${s.title}</div><div class="umeta">${s.date} · ${s.time}${s.location ? ' · '+s.location : ''}</div></div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="clabel">Coaching Sessions</div>
+        ${!d.coaching_sessions || d.coaching_sessions.length === 0
+          ? `<div class="note">No coaching sessions in the last 30 days.</div>`
+          : d.coaching_sessions.map(c => `
+            <div class="coaching-item">
+              <div class="coaching-date">${fmtDate(c.date)}</div>
+              <div class="coaching-meta">${c.duration ? c.duration + ' min' : ''}${c.location ? ' · ' + c.location : ''}</div>
+              ${c.drills_focus ? `<div class="coaching-focus">${c.drills_focus}</div>` : ''}
+            </div>`).join('')}
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="err">Failed to load activity data.</div>`; }
+}
+
+loadOverview();
+loadProgress();
+loadMatches();
+loadActivity();
+</script>
+</body>
+</html>

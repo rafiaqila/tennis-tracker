@@ -186,8 +186,10 @@ tennis-tracker/
 ├── bigquery/
 │   ├── schema_session.json
 │   └── schema_match_result.json
-└── infra/
-    └── docker-compose.yml      (secrets removed)
+├── infra/
+│   └── docker-compose.yml      (secrets removed)
+└── dashboard/
+    └── index.html
 ```
 
 ---
