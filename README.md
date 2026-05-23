@@ -20,16 +20,16 @@ A personal tennis data pipeline. Log sessions through a Telegram bot, store ever
 ## Screenshots
 
 > **Bot conversation flow**
-> ![Bot conversation](screenshots/bot-conversation.png)
+> ![Bot conversation](screenshots/screenshot-1.jpeg)
 
 > **Pre-session brief**
-> ![Pre-session brief](screenshots/pre-session-brief.png)
+> ![Pre-session brief](screenshots/screenshot-9.jpeg)
 
 > **Dashboard: Overview tab**
-> ![Dashboard overview](screenshots/dashboard-overview.png)
+> ![Dashboard overview](screenshots/screenshot-13.jpeg)
 
 > **Dashboard: Progress tab**
-> ![Dashboard progress](screenshots/dashboard-progress.png)
+> ![Dashboard progress](screenshots/screenshot-12.jpeg)
 
 See the full build writeup on [LinkedIn](https://www.linkedin.com/posts/raqilhidayat_personal-tennis-assistant-with-n8n-ugcPost-7450342290138529792-EICl/).
 
