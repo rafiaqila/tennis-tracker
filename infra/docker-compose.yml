@@ -1,3 +1,38 @@
-# Add your own — remove all credentials and secrets before committing.
-# Replace all passwords, tokens, and domain names with placeholders
-# before committing this file.
+version: "3"
+
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: YOUR_POSTGRES_PASSWORD
+      POSTGRES_DB: n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U n8n']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - WEBHOOK_URL=YOUR_WEBHOOK_URL
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Asia/Kuala_Lumpur
+      - TZ=Asia/Kuala_Lumpur
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+    volumes:
+      - ~/.n8n:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
